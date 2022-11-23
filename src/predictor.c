@@ -52,6 +52,13 @@ struct {
   uint64_t history;
 } gsharePredictor;
 
+struct {
+  char* bht;
+} bimodalPredictor;
+
+struct {
+  char* predCounter;
+} tournamentPredictor;
 //------------------------------------//
 //        Predictor Functions         //
 //------------------------------------//
@@ -64,7 +71,7 @@ void static_train(uint32_t pc, uint8_t outcome) {
   return;
 }
 
-void init_static_predictor() {
+void static_init() {
   pred_func = static_pred;
   train_func = static_train;
 }
@@ -114,11 +121,66 @@ void gshare_train(uint32_t pc, uint8_t outcome) {
   }
 }
 
-void init_gsharePredictor(){
-  gsharePredictor.bht = malloc(2 << ghistoryBits);
+void gshare_init(){
+  size_t bht_size = 1 << ghistoryBits;
+  gsharePredictor.bht = malloc(bht_size);
+  memset(gsharePredictor.bht, 0, bht_size);
   gsharePredictor.history = 0;
   pred_func = gshare_pred;
   train_func = gshare_train;
+}
+
+// functions for bimodal predictor
+uint8_t bimodal_pred(uint32_t pc) {
+  return bimodalPredictor.bht[trim(pc, lhistoryBits)] >= WT;
+}
+
+void bimodal_train(uint32_t pc, uint8_t outcome) {
+  char* pred = bimodalPredictor.bht + trim(pc, lhistoryBits);
+  if (outcome==TAKEN && *pred < ST) {
+    *pred += 1;
+  } else if (outcome==NOTTAKEN && *pred > SN){
+    *pred -= 1;
+  }
+}
+
+void bimodal_init() {
+  size_t bht_size = 1 << lhistoryBits;
+  bimodalPredictor.bht = malloc(bht_size);
+  memset(bimodalPredictor.bht, 0, bht_size);
+  pred_func = bimodal_pred;
+  train_func = bimodal_train;
+}
+
+// functions for tournament predictor
+uint8_t tournament_pred(uint32_t pc) { 
+  if (tournamentPredictor.predCounter[trim(pc, pcIndexBits)] >= 2) {
+    return bimodal_pred(pc);
+  } else {
+    return gshare_pred(pc);
+  }
+}
+
+void tournament_train(uint32_t pc, uint8_t outcome) {
+    uint8_t gresult = gshare_pred(pc);
+    uint8_t lresult = bimodal_pred(pc);
+    gshare_train(pc, outcome);
+    bimodal_train(pc, outcome);
+    char* counter = tournamentPredictor.predCounter + trim(pc, pcIndexBits);
+    if (gresult==outcome && lresult!=outcome && *counter > 0) {
+      *counter -= 1;
+    } else if (gresult!=outcome && lresult==outcome && *counter < 3) {
+      *counter += 1;
+    }
+}
+
+void tournament_init() {
+  gshare_init();
+  bimodal_init();
+  tournamentPredictor.predCounter = malloc(1 << pcIndexBits);
+  memset(tournamentPredictor.predCounter, 1, 1 << pcIndexBits); //initialized to Weakly select the Global Predictor.
+  pred_func = tournament_pred;
+  train_func = tournament_train;
 }
 // Initialize the predictor
 //
@@ -130,12 +192,13 @@ init_predictor()
   //
     switch (bpType) {
     case STATIC:
-      init_static_predictor();
+      static_init();
       break;
     case GSHARE:
-      init_gsharePredictor();
+      gshare_init();
       break;
     case TOURNAMENT:
+      tournament_init();
       break;
     case CUSTOM:
       break;
