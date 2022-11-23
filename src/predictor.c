@@ -10,6 +10,12 @@
 #include <stdlib.h>
 #include <string.h>
 #include "predictor.h"
+#define max(a,b) (((a) > (b)) ? (a) : (b))
+#define min(a,b) (((a) < (b)) ? (a) : (b))
+#define trim(x,c) ((((uint64_t)1<<(c))-1) & (x))
+#define getBit(x,i)    (((x)>>(i)) & 1)
+#define clearBit(x,i)  (x) &= ~(1 << (i))
+#define setBit(x,i)    (x) |= (1 << (i))
 
 //
 // TODO:Student Information
@@ -43,7 +49,7 @@ uint8_t (*pred_func)(uint32_t pc);
 void (*train_func)(uint32_t pc, uint8_t outcome);
 struct {
   char* bht;
-  char* history;
+  uint64_t history;
 } gsharePredictor;
 
 //------------------------------------//
@@ -51,7 +57,7 @@ struct {
 //------------------------------------//
 
 // functions for static predictor
-uint8_t static_pred() {
+uint8_t static_pred(uint32_t pc) {
   return TAKEN;
 }
 void static_train(uint32_t pc, uint8_t outcome) {
@@ -63,15 +69,56 @@ void init_static_predictor() {
   train_func = static_train;
 }
 
+void updateBit(char* x, size_t index, uint8_t val) {
+    // update the indexed bit of char x to val (0 or 1)
+    if(val) setBit(*x, index);
+    else clearBit(*x, index);
+}
+
+
+// update 2-bit counter
+void update_counter(char* counter, size_t index, uint8_t outcome) {
+  counter += index >> 2;
+  index &= 3;
+  uint8_t i1=index<<1, i2=1+(index<<1);
+  uint8_t lo = getBit(*counter, i1)+(getBit(*counter, i2)<<1);
+  if (outcome==TAKEN && lo < ST) {
+    lo += 1;
+    updateBit(counter, i1, lo & 1);
+    updateBit(counter, i2, lo >> 1);
+  } else if (outcome==NOTTAKEN && lo > SN){
+    lo -= 1;
+    updateBit(counter, i1, lo & 1);
+    updateBit(counter, i2, lo >> 1);
+  }
+}
+
 // functions for gshare predictor
-uint8_t gshare_pred() {
-  return NOTTAKEN;
+uint8_t gshare_pred(uint32_t pc) {
+  // int index = trim(gsharePredictor.history^pc, ghistoryBits);
+  // char* counter = gsharePredictor.bht;
+  // uint8_t i1=index<<1, i2=1+(index<<1);
+  // uint8_t lo = getBit(*counter, i1)+(getBit(*counter, i2)<<1);
+  return gsharePredictor.bht[trim(gsharePredictor.history^pc, ghistoryBits)]>=WT;
+}
+
+void gshare_train(uint32_t pc, uint8_t outcome) {
+  gsharePredictor.history <<= 1;
+  gsharePredictor.history |= 1;
+  // update_counter(gsharePredictor.bht, trim(gsharePredictor.history^pc, ghistoryBits), outcome);
+  char* pred = gsharePredictor.bht + trim(gsharePredictor.history^pc, ghistoryBits);
+  if (outcome==TAKEN && *pred < ST) {
+    *pred += 1;
+  } else if (outcome==NOTTAKEN && *pred > SN){
+    *pred -= 1;
+  }
 }
 
 void init_gsharePredictor(){
-    gsharePredictor.bht = malloc(2 << ghistoryBits);
-    memset(gsharePredictor.bht, 0, 2 << ghistoryBits);
-
+  gsharePredictor.bht = malloc(2 << ghistoryBits);
+  gsharePredictor.history = 0;
+  pred_func = gshare_pred;
+  train_func = gshare_train;
 }
 // Initialize the predictor
 //
