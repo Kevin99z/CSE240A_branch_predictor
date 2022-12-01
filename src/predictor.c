@@ -58,7 +58,11 @@ struct {
 } bimodalPredictor;
 
 struct {
-  char* predCounter;
+  char* ght; //global history table
+  uint32_t* lht; //local history table
+  char* pht; //pattern history table
+  char* cht; //choice history table
+  uint64_t history;
 } tournamentPredictor;
 
 struct {
@@ -123,16 +127,13 @@ uint8_t gshare_pred(uint32_t pc) {
 void gshare_train(uint32_t pc, uint8_t outcome) {
   // update_counter(gsharePredictor.bht, trim(gsharePredictor.history^pc, ghistoryBits), outcome);
   char* pred = gsharePredictor.bht + trim(gsharePredictor.history^pc, ghistoryBits);
-  gsharePredictor.history <<= 1;
-  if (outcome==TAKEN) {
-    gsharePredictor.history |= 1;
-    if(*pred<ST)
-    {
+  if (outcome==TAKEN && *pred<ST) {
       *pred += 1;
-    }
   } else if (outcome==NOTTAKEN && *pred > SN){
     *pred -= 1;
   }
+  gsharePredictor.history <<= 1;
+  gsharePredictor.history |= outcome;
 }
 
 void gshare_init(){
@@ -166,33 +167,71 @@ void bimodal_init() {
   train_func = bimodal_train;
 }
 
+
 // functions for tournament predictor
 uint8_t tournament_pred(uint32_t pc) { 
-  if (tournamentPredictor.predCounter[trim(pc, pcIndexBits)] >= 2) {
-    return bimodal_pred(pc);
+  size_t h = trim(tournamentPredictor.history, ghistoryBits);
+  if (tournamentPredictor.cht[h] >= 2) {
+    size_t lht_idx = trim(pc, pcIndexBits);
+    size_t pht_idx = trim(tournamentPredictor.lht[lht_idx],lhistoryBits);
+    return tournamentPredictor.pht[pht_idx] >= WT;
   } else {
-    return gshare_pred(pc);
+    return tournamentPredictor.ght[h] >= WT;
   }
 }
 
 void tournament_train(uint32_t pc, uint8_t outcome) {
-    uint8_t gresult = gshare_pred(pc);
-    uint8_t lresult = bimodal_pred(pc);
-    gshare_train(pc, outcome);
-    bimodal_train(pc, outcome);
-    char* counter = tournamentPredictor.predCounter + trim(pc, pcIndexBits);
+    // recalculate result
+    size_t h = trim(tournamentPredictor.history, ghistoryBits);
+    uint8_t gresult = tournamentPredictor.ght[h]>=WT;
+    size_t lht_idx = trim(pc,pcIndexBits);
+    size_t pht_idx = trim(tournamentPredictor.lht[lht_idx],lhistoryBits);
+    uint8_t lresult = tournamentPredictor.pht[pht_idx];
+    // update ght
+    char* gpred = tournamentPredictor.ght + h;
+    if (outcome == TAKEN && *gpred < ST) {
+      *gpred += 1;
+    } else if (outcome == NOTTAKEN && *gpred > SN) {
+      *gpred -= 1;
+    }
+    // update pht
+    char* lpred = tournamentPredictor.pht + pht_idx;
+    if (outcome == TAKEN && *lpred < ST) {
+      *lpred += 1;
+    } else if (outcome == NOTTAKEN && *lpred > SN) {
+      *lpred -= 1;
+    }
+    // update local history
+    tournamentPredictor.lht[lht_idx] <<= 1;
+    tournamentPredictor.lht[lht_idx] |= outcome;
+    // update choice counter
+    char* counter = tournamentPredictor.cht + h;
     if (gresult==outcome && lresult!=outcome && *counter > 0) {
       *counter -= 1;
     } else if (gresult!=outcome && lresult==outcome && *counter < 3) {
       *counter += 1;
     }
+    // update global history
+    tournamentPredictor.history <<= 1;
+    tournamentPredictor.history |= outcome;
 }
 
 void tournament_init() {
-  gshare_init();
-  bimodal_init();
-  tournamentPredictor.predCounter = malloc(1 << pcIndexBits);
-  memset(tournamentPredictor.predCounter, 1, 1 << pcIndexBits); //initialized to Weakly select the Global Predictor.
+  // initialize ght
+  size_t ght_size = 1 << ghistoryBits;
+  tournamentPredictor.ght = malloc(ght_size);
+  memset(tournamentPredictor.ght, 0, ght_size);
+  // initialize lht
+  size_t lht_size = 4 << pcIndexBits;
+  tournamentPredictor.lht = malloc(lht_size);
+  memset(tournamentPredictor.lht, 0, lht_size);
+  // initialize pht
+  size_t pht_size = 1 << lhistoryBits;
+  tournamentPredictor.pht = malloc(pht_size);
+  memset(tournamentPredictor.pht, 0, pht_size);
+  // initialize cht
+  tournamentPredictor.cht = malloc(ght_size);
+  memset(tournamentPredictor.cht, 1, ght_size); //initialized to Weakly select the Global Predictor.
   pred_func = tournament_pred;
   train_func = tournament_train;
 }
@@ -210,16 +249,13 @@ void pa_train(uint32_t pc, uint8_t outcome) {
   int bht_index=trim(pc,pcIndexBits);
   int pht_index=trim(paPredictor.bht[bht_index],lhistoryBits);
   char* pred = paPredictor.pht + pht_index;
-  paPredictor.bht[bht_index] <<= 1;
-  if (outcome==TAKEN) {
-    paPredictor.bht[bht_index] |= 1;
-    if(*pred<ST)
-    {
-      *pred += 1;
-    }
+  if (outcome==TAKEN && *pred<ST) {
+    *pred += 1;
   } else if (outcome==NOTTAKEN && *pred > SN){
     *pred -= 1;
   }
+  paPredictor.bht[bht_index] <<= 1;
+  paPredictor.bht[bht_index] |= outcome;
 }
 
 void pa_init() {
