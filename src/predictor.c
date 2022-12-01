@@ -35,6 +35,7 @@ const char *bpName[4] = { "Static", "Gshare",
 int ghistoryBits; // Number of bits used for Global History
 int lhistoryBits; // Number of bits used for Local History
 int pcIndexBits;  // Number of bits used for PC index
+int pcIndexBase;  // Number of bits used for PC index
 int bpType;       // Branch Prediction Type
 int verbose;
 
@@ -59,6 +60,16 @@ struct {
 struct {
   char* predCounter;
 } tournamentPredictor;
+
+struct {
+  uint64_t* bht;
+  char* pht;
+} paPredictor;
+
+struct {
+  char* predCounter;
+} customPredictor;
+
 //------------------------------------//
 //        Predictor Functions         //
 //------------------------------------//
@@ -110,12 +121,15 @@ uint8_t gshare_pred(uint32_t pc) {
 }
 
 void gshare_train(uint32_t pc, uint8_t outcome) {
-  gsharePredictor.history <<= 1;
-  gsharePredictor.history |= 1;
   // update_counter(gsharePredictor.bht, trim(gsharePredictor.history^pc, ghistoryBits), outcome);
   char* pred = gsharePredictor.bht + trim(gsharePredictor.history^pc, ghistoryBits);
-  if (outcome==TAKEN && *pred < ST) {
-    *pred += 1;
+  gsharePredictor.history <<= 1;
+  if (outcome==TAKEN) {
+    gsharePredictor.history |= 1;
+    if(*pred<ST)
+    {
+      *pred += 1;
+    }
   } else if (outcome==NOTTAKEN && *pred > SN){
     *pred -= 1;
   }
@@ -182,6 +196,74 @@ void tournament_init() {
   pred_func = tournament_pred;
   train_func = tournament_train;
 }
+
+
+// functions for pa predictor
+uint8_t pa_pred(uint32_t pc) {
+    int bht_index=trim(pc,pcIndexBits);
+    int pht_index=trim(paPredictor.bht[bht_index],ghistoryBits);
+    return paPredictor.pht[pht_index]>=WT;
+}
+
+void pa_train(uint32_t pc, uint8_t outcome) {
+    // update_counter(gsharePredictor.bht, trim(gsharePredictor.history^pc, ghistoryBits), outcome);
+  int bht_index=trim(pc,pcIndexBits);
+  int pht_index=trim(paPredictor.bht[bht_index],ghistoryBits);
+  char* pred = paPredictor.pht + pht_index;
+  paPredictor.bht[bht_index] <<= 1;
+  if (outcome==TAKEN) {
+    paPredictor.bht[bht_index] |= 1;
+    if(*pred<ST)
+    {
+      *pred += 1;
+    }
+  } else if (outcome==NOTTAKEN && *pred > SN){
+    *pred -= 1;
+  }
+}
+
+void pa_init() {
+    size_t bht_size=1<<pcIndexBits;
+    size_t pht_size=1<<ghistoryBits;
+    paPredictor.bht = malloc(bht_size*sizeof(uint64_t));
+    paPredictor.pht = malloc(pht_size);
+    memset(paPredictor.bht, 0, bht_size*sizeof(uint64_t));
+    memset(paPredictor.pht, 0, pht_size);
+    pred_func = pa_pred;
+    train_func = pa_train;
+}
+
+
+// functions for tournament predictor
+uint8_t custom_pred(uint32_t pc) { 
+  if (customPredictor.predCounter[trim(pc, pcIndexBits)] >= 2) {
+    return pa_pred(pc);
+  } else {
+    return gshare_pred(pc);
+  }
+}
+
+void custom_train(uint32_t pc, uint8_t outcome) {
+    uint8_t gresult = gshare_pred(pc);
+    uint8_t paresult = pa_pred(pc);
+    gshare_train(pc, outcome);
+    pa_train(pc, outcome);
+    char* counter = customPredictor.predCounter + trim(pc, pcIndexBits);
+    if (gresult==outcome && paresult!=outcome && *counter > 0) {
+      *counter -= 1;
+    } else if (gresult!=outcome && paresult==outcome && *counter < 3) {
+      *counter += 1;
+    }
+}
+
+void custom_init() {
+  gshare_init();
+  pa_init();
+  customPredictor.predCounter = malloc(1 << pcIndexBits);
+  memset(customPredictor.predCounter, 1, 1 << pcIndexBits); //initialized to Weakly select the Global Predictor.
+  pred_func = custom_pred;
+  train_func = custom_train;
+}
 // Initialize the predictor
 //
 void
@@ -201,6 +283,7 @@ init_predictor()
       tournament_init();
       break;
     case CUSTOM:
+      custom_init();
       break;
     default:
       break;

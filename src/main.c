@@ -11,7 +11,7 @@
 #include "predictor.h"
 
 FILE *stream;
-char *buf = NULL;
+char buf[100];
 size_t len = 0;
 
 // Print out the Usage information to stderr
@@ -47,8 +47,9 @@ handle_option(char *arg)
   } else if (!strncmp(arg,"--tournament:",13)) {
     bpType = TOURNAMENT;
     sscanf(arg+13,"%d:%d:%d", &ghistoryBits, &lhistoryBits, &pcIndexBits);
-  } else if (!strcmp(arg,"--custom")) {
+  } else if (!strncmp(arg,"--custom:",9)) {
     bpType = CUSTOM;
+    sscanf(arg+9,"%d:%d:%d", &ghistoryBits, &lhistoryBits, &pcIndexBits);
   } else if (!strcmp(arg,"--verbose")) {
     verbose = 1;
   } else {
@@ -66,7 +67,7 @@ handle_option(char *arg)
 int
 read_branch(uint32_t *pc, uint8_t *outcome)
 {
-  if (getline(&buf, &len, stream) == -1) {
+  if (fgets(buf, sizeof(buf), stream) == NULL) {
     return 0;
   }
 
@@ -84,7 +85,6 @@ main(int argc, char *argv[])
   stream = stdin;
   bpType = STATIC;
   verbose = 0;
-
   // Process cmdline Arguments
   for (int i = 1; i < argc; ++i) {
     if (!strcmp(argv[i],"--help")) {
@@ -128,6 +128,7 @@ main(int argc, char *argv[])
   }
 
   // Print out the mispredict statistics
+  printf("bptype %d_______________________\n",bpType);
   printf("Branches:        %10d\n", num_branches);
   printf("Incorrect:       %10d\n", mispredictions);
   float mispredict_rate = 100*((float)mispredictions / (float)num_branches);
@@ -135,7 +136,5 @@ main(int argc, char *argv[])
 
   // Cleanup
   fclose(stream);
-  free(buf);
-
   return 0;
 }
