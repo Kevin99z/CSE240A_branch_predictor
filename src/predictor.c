@@ -201,14 +201,14 @@ void tournament_init() {
 // functions for pa predictor
 uint8_t pa_pred(uint32_t pc) {
     int bht_index=trim(pc,pcIndexBits);
-    int pht_index=trim(paPredictor.bht[bht_index],ghistoryBits);
+    int pht_index=trim(paPredictor.bht[bht_index],lhistoryBits);
     return paPredictor.pht[pht_index]>=WT;
 }
 
 void pa_train(uint32_t pc, uint8_t outcome) {
     // update_counter(gsharePredictor.bht, trim(gsharePredictor.history^pc, ghistoryBits), outcome);
   int bht_index=trim(pc,pcIndexBits);
-  int pht_index=trim(paPredictor.bht[bht_index],ghistoryBits);
+  int pht_index=trim(paPredictor.bht[bht_index],lhistoryBits);
   char* pred = paPredictor.pht + pht_index;
   paPredictor.bht[bht_index] <<= 1;
   if (outcome==TAKEN) {
@@ -224,7 +224,7 @@ void pa_train(uint32_t pc, uint8_t outcome) {
 
 void pa_init() {
     size_t bht_size=1<<pcIndexBits;
-    size_t pht_size=1<<ghistoryBits;
+    size_t pht_size=1<<lhistoryBits;
     paPredictor.bht = malloc(bht_size*sizeof(uint64_t));
     paPredictor.pht = malloc(pht_size);
     memset(paPredictor.bht, 0, bht_size*sizeof(uint64_t));
@@ -257,6 +257,9 @@ void custom_train(uint32_t pc, uint8_t outcome) {
 }
 
 void custom_init() {
+  ghistoryBits = 13;
+  lhistoryBits = 13;
+  pcIndexBits = 11;
   gshare_init();
   pa_init();
   customPredictor.predCounter = malloc(1 << pcIndexBits);

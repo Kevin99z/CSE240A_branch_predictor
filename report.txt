@@ -1,0 +1,8 @@
+We implemented our custom branch predictor combining Per-address Two-Level Branch Predictor[1](PA predictor) and gshare predictor. The choice between the two branch predictors is done the same way as the tournament predictor.
+The PA predictor is implemented with a set of branch history table (BHT) addressed by "pcIndexBits" (which stores 2^pcIndexBits entries of branch histories, each using lhistoryBits) and a pattern history table (PHT) addressed by history patterns (2^lhistoryBits entries). 
+The amount of cache used in the PA predictor is m1 = lhistoryBits*2^pcIndexBits + 2*2^lhistoryBits. When lhistoryBits=13, pcIndexBits=10, m1 = 42 Kb.
+The amount of cache used in the gshare predictor is m2 = 2bit * 2^ghistoryBits. When ghistoryBits=13, m2 = 16 Kb.
+The amount of cache used for choosing between the two predictors is m3 = 2bit * 2^pcIndexBits. When pcIndexBits=11, m3 = 4 Kb.
+The total amount of cache used in our custom predictor is m1+m2+m3 = 62 Kb.
+
+[1] Yeh and Patt, “Two-Level Adaptive Training Branch Prediction,” MICRO 1991.
