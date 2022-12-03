@@ -186,7 +186,7 @@ void tournament_train(uint32_t pc, uint8_t outcome) {
     uint8_t gresult = tournamentPredictor.ght[h]>=WT;
     size_t lht_idx = trim(pc,pcIndexBits);
     size_t pht_idx = trim(tournamentPredictor.lht[lht_idx],lhistoryBits);
-    uint8_t lresult = tournamentPredictor.pht[pht_idx];
+    uint8_t lresult = tournamentPredictor.pht[pht_idx]>=WT;
     // update ght
     char* gpred = tournamentPredictor.ght + h;
     if (outcome == TAKEN && *gpred < ST) {
