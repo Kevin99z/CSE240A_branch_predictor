@@ -59,7 +59,7 @@ struct {
 
 struct {
   char* ght; //global history table
-  uint32_t* lht; //local history table
+  uint64_t* lht; //local history table
   char* pht; //pattern history table
   char* cht; //choice history table
   uint64_t history;
@@ -220,18 +220,18 @@ void tournament_init() {
   // initialize ght
   size_t ght_size = 1 << ghistoryBits;
   tournamentPredictor.ght = malloc(ght_size);
-  memset(tournamentPredictor.ght, 0, ght_size);
+  memset(tournamentPredictor.ght, WN, ght_size);
   // initialize lht
-  size_t lht_size = 4 << pcIndexBits;
+  size_t lht_size = 8 << pcIndexBits;
   tournamentPredictor.lht = malloc(lht_size);
   memset(tournamentPredictor.lht, 0, lht_size);
   // initialize pht
   size_t pht_size = 1 << lhistoryBits;
   tournamentPredictor.pht = malloc(pht_size);
-  memset(tournamentPredictor.pht, 0, pht_size);
+  memset(tournamentPredictor.pht, WN, pht_size);
   // initialize cht
   tournamentPredictor.cht = malloc(ght_size);
-  memset(tournamentPredictor.cht, 1, ght_size); //initialized to Weekly select the Global Predictor.
+  memset(tournamentPredictor.cht, WN, ght_size); //initialized to Weekly select the Global Predictor.
   pred_func = tournament_pred;
   train_func = tournament_train;
 }
