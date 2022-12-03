@@ -58,16 +58,17 @@ We ran experiments on given traces and compare our custom predictors to the two 
 
 We can see that our custom predictors outperform baselines in all tests. It's interesting that the 13:13:11 settings leads to massive improvments in fp_2 test, while maintaining a competitive accuracy in other tests. So we chose it as the default paramter for our custom predictor.
 
-<img src="assets/image-20221130212542685.png" alt="image-20221130212542685" style="zoom:80%;" />
+<img src="assets/Experiment_Result_Figure.png" alt="image-20221130212542685" style="zoom:80%;" />
 
 | trace | custom:13:14:10 | custom:13:13:11  | custom:14:13:10 | gshare:13 | tournament:9:10:10 |
 |  ----  | ----  | ----  | ----  | ----  | ----  |
-| mm_1  | 0.972 | 1.009 | 0.948 | 6.5 | 10.275 |
-| mm_2  | 6.989 | 6.692 | 6.812 | 10.229 | 12.75 |
 | fp_1  | 0.815 | 0.814 | 0.815 | 0.842 | 1.145 |
 | fp_2  | 1.146 | 0.222 | 1.146 | 1.5 | 7.577 |
 | int_1  | 11.447 | 10.803 |10.808 | 13.9 | 17.57 |
 | int_2  | 0.28 | 0.284 | 0.282 | 0.426 | 0.78 | 
+| mm_1  | 0.972 | 1.009 | 0.948 | 6.5 | 10.275 |
+| mm_2  | 6.989 | 6.692 | 6.812 | 10.229 | 12.75 |
+
 
 
 
