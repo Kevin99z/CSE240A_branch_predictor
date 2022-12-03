@@ -167,76 +167,6 @@ void gshare_init(){
 //   train_func = bimodal_train;
 // }
 
-
-// functions for tournament predictor
-uint8_t tournament_pred(uint32_t pc) { 
-  size_t h = trim(tournamentPredictor.history, ghistoryBits);
-  if (tournamentPredictor.cht[h] >= 2) {
-    size_t lht_idx = trim(pc, pcIndexBits);
-    size_t pht_idx = trim(tournamentPredictor.lht[lht_idx],lhistoryBits);
-    return tournamentPredictor.pht[pht_idx] >= WT;
-  } else {
-    return tournamentPredictor.ght[h] >= WT;
-  }
-}
-
-void tournament_train(uint32_t pc, uint8_t outcome) {
-    // recalculate result
-    size_t h = trim(tournamentPredictor.history, ghistoryBits);
-    uint8_t gresult = tournamentPredictor.ght[h]>=WT;
-    size_t lht_idx = trim(pc,pcIndexBits);
-    size_t pht_idx = trim(tournamentPredictor.lht[lht_idx],lhistoryBits);
-    uint8_t lresult = tournamentPredictor.pht[pht_idx];
-    // update ght
-    char* gpred = tournamentPredictor.ght + h;
-    if (outcome == TAKEN && *gpred < ST) {
-      *gpred += 1;
-    } else if (outcome == NOTTAKEN && *gpred > SN) {
-      *gpred -= 1;
-    }
-    // update pht
-    char* lpred = tournamentPredictor.pht + pht_idx;
-    if (outcome == TAKEN && *lpred < ST) {
-      *lpred += 1;
-    } else if (outcome == NOTTAKEN && *lpred > SN) {
-      *lpred -= 1;
-    }
-    // update local history
-    tournamentPredictor.lht[lht_idx] <<= 1;
-    tournamentPredictor.lht[lht_idx] |= outcome;
-    // update choice counter
-    char* counter = tournamentPredictor.cht + h;
-    if (gresult==outcome && lresult!=outcome && *counter > 0) {
-      *counter -= 1;
-    } else if (gresult!=outcome && lresult==outcome && *counter < 3) {
-      *counter += 1;
-    }
-    // update global history
-    tournamentPredictor.history <<= 1;
-    tournamentPredictor.history |= outcome;
-}
-
-void tournament_init() {
-  // initialize ght
-  size_t ght_size = 1 << ghistoryBits;
-  tournamentPredictor.ght = malloc(ght_size);
-  memset(tournamentPredictor.ght, 0, ght_size);
-  // initialize lht
-  size_t lht_size = 4 << pcIndexBits;
-  tournamentPredictor.lht = malloc(lht_size);
-  memset(tournamentPredictor.lht, 0, lht_size);
-  // initialize pht
-  size_t pht_size = 1 << lhistoryBits;
-  tournamentPredictor.pht = malloc(pht_size);
-  memset(tournamentPredictor.pht, 0, pht_size);
-  // initialize cht
-  tournamentPredictor.cht = malloc(ght_size);
-  memset(tournamentPredictor.cht, 1, ght_size); //initialized to Weekly select the Global Predictor.
-  pred_func = tournament_pred;
-  train_func = tournament_train;
-}
-
-
 // functions for pa predictor
 uint8_t pa_pred(uint32_t pc) {
     int bht_index=trim(pc,pcIndexBits);
@@ -264,13 +194,62 @@ void pa_init() {
     paPredictor.bht = malloc(bht_size*sizeof(uint64_t));
     paPredictor.pht = malloc(pht_size);
     memset(paPredictor.bht, 0, bht_size*sizeof(uint64_t));
-    memset(paPredictor.pht, 0, pht_size);
+    memset(paPredictor.pht, WN, pht_size);
     pred_func = pa_pred;
     train_func = pa_train;
 }
 
 
 // functions for tournament predictor
+uint8_t tournament_pred(uint32_t pc) { 
+  size_t h = trim(tournamentPredictor.history, ghistoryBits);
+  if (tournamentPredictor.cht[h] >= 2) {
+    return pa_pred(pc);
+  } else {
+    return tournamentPredictor.ght[h] >= WT;
+  }
+}
+
+void tournament_train(uint32_t pc, uint8_t outcome) {
+    // recalculate result
+    size_t h = trim(tournamentPredictor.history, ghistoryBits);
+    uint8_t gresult = tournamentPredictor.ght[h]>=WT;
+    // update ght
+    char* gpred = tournamentPredictor.ght + h;
+    if (outcome == TAKEN && *gpred < ST) {
+      *gpred += 1;
+    } else if (outcome == NOTTAKEN && *gpred > SN) {
+      *gpred -= 1;
+    }
+    uint8_t lresult=pa_pred(pc);
+    pa_train(pc,outcome);
+    // update choice counter
+    char* counter = tournamentPredictor.cht + h;
+    if (gresult==outcome && lresult!=outcome && *counter > 0) {
+      *counter -= 1;
+    } else if (gresult!=outcome && lresult==outcome && *counter < 3) {
+      *counter += 1;
+    }
+    // update global history
+    tournamentPredictor.history <<= 1;
+    tournamentPredictor.history |= outcome;
+}
+
+void tournament_init() {
+  pa_init();
+  // initialize ght
+  size_t ght_size = 1 << ghistoryBits;
+  tournamentPredictor.ght = malloc(ght_size);
+  memset(tournamentPredictor.ght, WN, ght_size);
+  // initialize cht
+  tournamentPredictor.cht = malloc(ght_size);
+  memset(tournamentPredictor.cht, WN, ght_size); //initialized to Weekly select the Global Predictor.
+  pred_func = tournament_pred;
+  train_func = tournament_train;
+}
+
+
+// functions for custom predictor
 uint8_t custom_pred(uint32_t pc) { 
   if (customPredictor.predCounter[trim(pc, pcIndexBits)] >= 2) {
     return pa_pred(pc);
@@ -293,9 +272,6 @@ void custom_train(uint32_t pc, uint8_t outcome) {
 }
 
 void custom_init() {
-  ghistoryBits = 13;
-  lhistoryBits = 13;
-  pcIndexBits = 11;
   gshare_init();
   pa_init();
   customPredictor.predCounter = malloc(1 << pcIndexBits);
