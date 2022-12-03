@@ -15,7 +15,7 @@ The PA predictor uses a branch history shift register table(BHT) and a pattern h
 The amount of memory used by the BHT is $lhistoryBits * 2^{PCIndexBits}$.
 The amount of memory used by the PHT is $2 * 2^{lhistoryBits}$.
 The total memory usage is $lhistoryBits * 2^{PCIndexBits} + 2 * 2^{lhistoryBits}$.
-
+The data structure is shown below.
 <img src="assets/PA.png"/>
 
 ### Tournament Predictor
@@ -39,8 +39,8 @@ In experiments, we found that the global predictor performs worse than the local
 We implemented our custom branch predictor combining the PA predictor and gshare predictor. The choice between the two branch predictors is done with the last pcIndexBits of PC.
 
 The amount of memory used in the PA predictor is $m1 = lhistoryBits*2^{pcIndexBits} + 2*2^{lhistoryBits}$ bit. 
-The amount of memory used in the gshare predictor is $m2 = 2 * 2^{ghistoryBits}$ bit. 
-The amount of memoryused for choosing between the two predictors is $m3 = 2 * 2^{pcIndexBits}$ bit. 
+The amount of memory used in the G-share predictor is $m2 = 2 * 2^{ghistoryBits}$ bit. 
+The amount of memory used for choosing between the two predictors is $m3 = 2 * 2^{pcIndexBits}$ bit. 
 
 The total amount of cache used in our custom predictor is $m =  m1+m2+m3 $.
 
@@ -60,6 +60,14 @@ We can see that our custom predictors outperform baselines in all tests. It's in
 
 <img src="assets/image-20221130212542685.png" alt="image-20221130212542685" style="zoom:80%;" />
 
+|  trace   | tournament:9:10:10  | gshare:13  | custom:14:13:10  | custom:13:13:11  | custom:13:14:10  |
+|  ----  | ----  | ----  | ----  | ----  | ----  |
+| int_1  | 17.57 | 13.9 | 10.808 | 10.803 | 11.447 |
+| int_2  | 0.78 | 0.426 | 0.282 | 0.284 | 0.28 |
+| fp_1  | 1.145 | 0.842 | 0.815 | 0.814 | 0.815 |
+| fp_2  | 7.577 | 1.5 | 1.146 | 0.222 | 1.146 |
+| mm_1  | 10.275 | 6.5 | 0.948 | 1.009 | 0.972 |
+| mm_2  | 12.75 | 10.229 | 6.812 | 6.692 | 6.989 |
 
 
 ## Citations
