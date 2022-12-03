@@ -146,26 +146,26 @@ void gshare_init(){
 }
 
 // functions for bimodal predictor
-uint8_t bimodal_pred(uint32_t pc) {
-  return bimodalPredictor.bht[trim(pc, lhistoryBits)] >= WT;
-}
+// uint8_t bimodal_pred(uint32_t pc) {
+//   return bimodalPredictor.bht[trim(pc, lhistoryBits)] >= WT;
+// }
 
-void bimodal_train(uint32_t pc, uint8_t outcome) {
-  char* pred = bimodalPredictor.bht + trim(pc, lhistoryBits);
-  if (outcome==TAKEN && *pred < ST) {
-    *pred += 1;
-  } else if (outcome==NOTTAKEN && *pred > SN){
-    *pred -= 1;
-  }
-}
+// void bimodal_train(uint32_t pc, uint8_t outcome) {
+//   char* pred = bimodalPredictor.bht + trim(pc, lhistoryBits);
+//   if (outcome==TAKEN && *pred < ST) {
+//     *pred += 1;
+//   } else if (outcome==NOTTAKEN && *pred > SN){
+//     *pred -= 1;
+//   }
+// }
 
-void bimodal_init() {
-  size_t bht_size = 1 << lhistoryBits;
-  bimodalPredictor.bht = malloc(bht_size);
-  memset(bimodalPredictor.bht, 0, bht_size);
-  pred_func = bimodal_pred;
-  train_func = bimodal_train;
-}
+// void bimodal_init() {
+//   size_t bht_size = 1 << lhistoryBits;
+//   bimodalPredictor.bht = malloc(bht_size);
+//   memset(bimodalPredictor.bht, 0, bht_size);
+//   pred_func = bimodal_pred;
+//   train_func = bimodal_train;
+// }
 
 
 // functions for tournament predictor
@@ -231,7 +231,7 @@ void tournament_init() {
   memset(tournamentPredictor.pht, 0, pht_size);
   // initialize cht
   tournamentPredictor.cht = malloc(ght_size);
-  memset(tournamentPredictor.cht, 1, ght_size); //initialized to Weakly select the Global Predictor.
+  memset(tournamentPredictor.cht, 1, ght_size); //initialized to Weekly select the Global Predictor.
   pred_func = tournament_pred;
   train_func = tournament_train;
 }
@@ -299,7 +299,7 @@ void custom_init() {
   gshare_init();
   pa_init();
   customPredictor.predCounter = malloc(1 << pcIndexBits);
-  memset(customPredictor.predCounter, 1, 1 << pcIndexBits); //initialized to Weakly select the Global Predictor.
+  memset(customPredictor.predCounter, 1, 1 << pcIndexBits); //initialized to Weekly select the Global Predictor.
   pred_func = custom_pred;
   train_func = custom_train;
 }

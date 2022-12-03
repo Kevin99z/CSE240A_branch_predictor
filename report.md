@@ -1,18 +1,27 @@
 # Branch Predictor Report
 
-Team members: Zeyuan Zhang (A59016242), Xiang Yu
+Team members: Zeyuan Zhang (A59016242), Xiang Yu (A59016312)
 
 ## Introduction
 
 ### G-share Predictor
 
-The gshare predictor uses a branch history table (BHT) addressed by the XOR of address and branch history (with ghistoryBits). The amount of memory used by the BHT is 2bit * 2^ghistoryBits, which reaches 16 Kb when ghistoryBits is 13. By using the XOR of address and branch history, gshare predictor avoids some collision between address that has the same upper bits, therefore making better use of the whole BHT (compared to gselect). On the other hand, as a "global"-based predictor, it would be harder for gshare to capture local patterns, especially in nested loops. 
+The gshare predictor uses a pattern history table (PHT) addressed by the XOR of PC address and global branch history shift register (with size of ghistoryBits). Each pattern history table entry takes 2 bit. The amount of memory used by the PHT is 2bit * 2^ghistoryBits, which reaches 16 Kb when ghistoryBits is 13. By using the XOR of address and branch history, G-share predictor avoids collisions between address that has the same upper bits, therefore making better use of the whole PHT (compared to gselect). On the other hand, as a "global"-based predictor, it would be harder for G-share to capture local patterns, especially in nested loops. 
 
-### Tournament
+
+### PA Predictor
+
+The PA predictor uses a branch history shift register table(BHT) and a pattern history table (PHT). It uses the last PCIndexBits bits of PC address to index the BHT, and uses the branch history(lhistoryBits) recorded in the BHT entry to index a PHT entry, finally uses the PHT entry(2 bits) to predict.
+The amount of memory used by the BHT is $lhistoryBits * 2^{PCIndexBits}$.
+The amount of memory used by the PHT is $2 * 2^{lhistoryBits}$.
+The total memory usage is $lhistoryBits * 2^{PCIndexBits} + 2 * 2^{lhistoryBits}$.
+
+<img src="assets/PA.png"/>
+
+### Tournament Predictor
 
 The tournament predictor used in the alpha 21264 microprocessor[1] composes of a Per-address Two-Level Branch Predictor\[2\](PA predictor) and a global predictor (See the graph below, the sizes of components vary in our implementation). The global predictor simply uses global history to address the prediction from the global history table (GHT).
 
-The PA predictor is implemented with a set of Local history table (LHT) addressed by "pcIndexBits" (which stores $2^{pcIndexBits}$ entries of branch histories, each sized lhistoryBits) and a pattern history table (PHT) addressed by history patterns ($2^{lhistoryBits}$ entries).
 The amount of memory used in the PA predictor is $m1 = lhistoryBits*2^{pcIndexBits} + 2*2^{lhistoryBits}$ bit. 
 The amount of memory used in the global predictor is $m2 = 2 * 2^{ghistoryBits}$ bit. 
 The amount of memoryused for choosing between the two predictors is $m3 = 2 * 2^{ghistoryBits}$ bit. 
@@ -21,9 +30,9 @@ As per the requirements, ghistoryBits=9, lhistoryBits = 10, pcIndexBits=10. Ther
 
 <img src="assets/image-20221130210556203.png" alt="image-20221130210556203" style="zoom:50%;" />
 
-### 
+### Ideas
 
-In experiments, we found that the global predictor performs worse than the local predictor in 9:10:10 settings. It motivate us to replace the global predictor with gshare predictor.
+In experiments, we found that the global predictor performs worse than the local predictor in 9:10:10 settings. It motivate us to replace the global predictor with G-share predictor.
 
 ### Custom Predictor
 
@@ -47,7 +56,7 @@ We have three configurations in our experiments:
 
 We ran experiments on given traces and compare our custom predictors to the two baselines (gshare:13 and tournament:9:10:10). The result is recorded in "result.xlsx" and we plot the result below in misprediction rate(%).
 
-We can see that our custom predictors outperform baselines in all tests. It's interesting that the 13:13:11 settings leads to massive improvments in fp_2 test, while maintaing a competitive accuracy in other tests. So we chose it as the default paramter for our custom predictor.
+We can see that our custom predictors outperform baselines in all tests. It's interesting that the 13:13:11 settings leads to massive improvments in fp_2 test, while maintaining a competitive accuracy in other tests. So we chose it as the default paramter for our custom predictor.
 
 <img src="assets/image-20221130212542685.png" alt="image-20221130212542685" style="zoom:80%;" />
 
