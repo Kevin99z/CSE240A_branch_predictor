@@ -139,7 +139,7 @@ void gshare_train(uint32_t pc, uint8_t outcome) {
 void gshare_init(){
   size_t bht_size = 1 << ghistoryBits;
   gsharePredictor.bht = malloc(bht_size);
-  memset(gsharePredictor.bht, 0, bht_size);
+  memset(gsharePredictor.bht, WN, bht_size);
   gsharePredictor.history = 0;
   pred_func = gshare_pred;
   train_func = gshare_train;
