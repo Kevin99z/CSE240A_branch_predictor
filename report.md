@@ -2,6 +2,8 @@
 
 Team members: Zeyuan Zhang (A59016242), Xiang Yu (A59016312)
 
+Project link: https://github.com/Kevin99z/CSE240A_branch_predictor
+
 ## Introduction
 
 ### G-share Predictor
@@ -30,17 +32,23 @@ As per the requirements, ghistoryBits=9, lhistoryBits = 10, pcIndexBits=10. Ther
 
 <img src="assets/image-20221130210556203.png" alt="image-20221130210556203" style="zoom:50%;" />
 
-### Ideas
 
-In experiments, we found that the global predictor performs worse than the local predictor in 9:10:10 settings. It motivate us to replace the global predictor with G-share predictor.
 
-### Custom Predictor
+## Custom Predictor
+
+### Design
+
+In experiments, we found that the global predictor performs worse than the local predictor in 9:10:10 settings, while the local two-level predictor performs so well that we cannot beat it with some other alternatives. So we replace the global predictor in the tournament predictor with a G-share predictor. The other parts remain the same as the tournament predictor implemented in the last section.
+
+### Implementation
 
 We implemented our custom branch predictor combining the PA predictor and gshare predictor. The choice between the two branch predictors is done with the last pcIndexBits of PC.
 
 The amount of memory used in the PA predictor is $m1 = lhistoryBits*2^{pcIndexBits} + 2*2^{lhistoryBits}$ bit. 
 The amount of memory used in the G-share predictor is $m2 = 2 * 2^{ghistoryBits}$ bit. 
 The amount of memory used for choosing between the two predictors is $m3 = 2 * 2^{pcIndexBits}$ bit. 
+
+Note: we only count the memory that is actually used by the simulated predictor.
 
 The total amount of cache used in our custom predictor is $m =  m1+m2+m3 $.
 
@@ -54,25 +62,26 @@ We have three configurations in our experiments:
 
 ## Result
 
-We ran experiments on given traces and compare our custom predictors to the two baselines (gshare:13 and tournament:9:10:10). The result is recorded in "result.xlsx" and we plot the result below in misprediction rate(%).
+We ran experiments on given traces and compare our custom predictors to the two baselines (gshare:13 and tournament:9:10:10). We plot the result below in misprediction rate(%).
 
 We can see that our custom predictors outperform baselines in all tests. It's interesting that the 13:13:11 settings leads to massive improvments in fp_2 test, while maintaining a competitive accuracy in other tests. So we chose it as the default paramter for our custom predictor.
 
 <img src="assets/Experiment_Result_Figure.png" alt="image-20221130212542685" style="zoom:80%;" />
 
-| trace | custom:13:14:10 | custom:13:13:11  | custom:14:13:10 | gshare:13 | tournament:9:10:10 |
-|  ----  | ----  | ----  | ----  | ----  | ----  |
-| fp_1  | 0.812 | 0.811 | 0.810 | 0.825 | 0.991 |
-| fp_2  | 1.327 | 0.219 | 1.327 | 1.678 | 3.246 |
-| int_1  | 11.408 | 10.770 |10.753 | 13.839 | 12.622 |
-| int_2  | 0.275 | 0.279 | 0.276 | 0.420 | 0.426 | 
-| mm_1  | 1.003 | 1.061 | 1.000 | 6.696 | 2.581 |
-| mm_2  | 6.935 | 6.654 | 6.752 | 10.138 | 8.483 |
 
 
+## Appendix
 
+Data for the performance comparison between different branch predictors (% misprediction rate):
 
-
+| trace | custom:13:14:10 | custom:13:13:11 | custom:14:13:10 | gshare:13 | tournament:9:10:10 |
+| ----- | --------------- | --------------- | --------------- | --------- | ------------------ |
+| fp_1  | 0.812           | 0.811           | 0.810           | 0.825     | 0.991              |
+| fp_2  | 1.327           | 0.219           | 1.327           | 1.678     | 3.246              |
+| int_1 | 11.408          | 10.770          | 10.753          | 13.839    | 12.622             |
+| int_2 | 0.275           | 0.279           | 0.276           | 0.420     | 0.426              |
+| mm_1  | 1.003           | 1.061           | 1.000           | 6.696     | 2.581              |
+| mm_2  | 6.935           | 6.654           | 6.752           | 10.138    | 8.483              |
 
 ## Citations
 
