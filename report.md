@@ -85,7 +85,7 @@ Data for the performance comparison between different branch predictors (% mispr
 
 ## Contribution
 
-Zeyuan Zhang implement G-share predictor and Tournament predictor, Xiang Yu implement PA predictor and custom predictor. Zeyuan Zhang and Xiang Yu both debugged each other's code and discussed how to implement our custom predictor. We each conduct half of the performance evaluation and write half of the report. We share the same contribution to this project.
+Zeyuan Zhang implemented G-share predictor and Tournament predictor, Xiang Yu implemented PA predictor and custom predictor. Zeyuan Zhang and Xiang Yu both debugged each other's code and discussed how to implement our custom predictor. We each conducted half of the performance evaluation and wrote half of the report. We share the same contribution to this project.
 
 ## Citations
 
