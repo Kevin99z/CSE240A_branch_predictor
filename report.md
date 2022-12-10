@@ -83,6 +83,10 @@ Data for the performance comparison between different branch predictors (% mispr
 | mm_1  | 1.003           | 1.061           | 1.000           | 6.696     | 2.581              |
 | mm_2  | 6.935           | 6.654           | 6.752           | 10.138    | 8.483              |
 
+## Contribution
+
+Zeyuan Zhang implement G-share predictor and Tournament predictor, Xiang Yu implement PA predictor and custom predictor. Zeyuan Zhang and Xiang Yu both debugged each other's code and discussed how to implement our custom predictor. We each conduct half of the performance evaluation and write half of the report. We share the same contribution to this project.
+
 ## Citations
 
 [1] Kessler, Richard E. "The alpha 21264 microprocessor." *IEEE micro* 19.2 (1999): 24-36.
